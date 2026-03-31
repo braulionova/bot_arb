@@ -1,0 +1,73 @@
+{
+  "n_train": 69089,
+  "n_test": 17273,
+  "n_positive": 1060,
+  "n_negative": 85302,
+  "threshold": 0.3,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
+  "auc": 1.0,
+  "top_features": [
+    {
+      "name": "profit_gross_eth",
+      "importance": 2245880.0
+    },
+    {
+      "name": "spread_pct",
+      "importance": 1.136870003519419e-13
+    },
+    {
+      "name": "net_spread_pct",
+      "importance": 0.0
+    },
+    {
+      "name": "abs_spread",
+      "importance": 0.0
+    },
+    {
+      "name": "buy_fee_bps",
+      "importance": 0.0
+    },
+    {
+      "name": "sell_fee_bps",
+      "importance": 0.0
+    },
+    {
+      "name": "total_fee_bps",
+      "importance": 0.0
+    },
+    {
+      "name": "buy_dex_enc",
+      "importance": 0.0
+    },
+    {
+      "name": "sell_dex_enc",
+      "importance": 0.0
+    },
+    {
+      "name": "buy_is_v3",
+      "importance": 0.0
+    },
+    {
+      "name": "sell_is_v3",
+      "importance": 0.0
+    },
+    {
+      "name": "both_v3",
+      "importance": 0.0
+    },
+    {
+      "name": "both_v2",
+      "importance": 0.0
+    },
+    {
+      "name": "mixed_v2_v3",
+      "importance": 0.0
+    },
+    {
+      "name": "stablecoin_in",
+      "importance": 0.0
+    }
+  ]
+}

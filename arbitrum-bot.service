@@ -1,0 +1,21 @@
+[Unit]
+Description=Arbitrum MEV Bot
+After=arbitrum-rpc-cache.service
+Requires=arbitrum-rpc-cache.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/arbitrum_bot
+EnvironmentFile=/home/ubuntu/arbitrum_bot/.env
+Environment=RUST_LOG=arbitrum_bot=info
+Environment=ML_OBSERVE_ONLY=false
+ExecStartPre=/bin/sleep 3
+ExecStart=/home/ubuntu/arbitrum_bot/target/release/arbitrum_bot
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/ubuntu/arbitrum_bot/logs/arb-bot.log
+StandardError=append:/home/ubuntu/arbitrum_bot/logs/arb-bot.log
+
+[Install]
+WantedBy=multi-user.target

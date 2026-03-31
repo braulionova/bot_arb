@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo build:*)",
+      "Bash(pkill -f \"target/release/arbitrum_bot\")",
+      "Bash(pkill -f arbitrum_bot)",
+      "Bash(find /root/arbitrum_bot -name *arb* -type f)",
+      "Bash(ls -la /tmp/arb*)",
+      "Bash(forge build:*)",
+      "Bash(forge test:*)",
+      "Bash(aws configure:*)",
+      "Bash(aws sts:*)",
+      "Bash(./deploy-aws.sh)",
+      "Bash(du -sh /home/ubuntu/arbitrum_bot/*)",
+      "Bash(sudo systemctl:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(python3:*)",
+      "Bash(curl -s -X POST http://127.0.0.1:8090/score -H \"Content-Type: application/json\" -d '{\"\"profit_gross_eth\"\": 0.001, \"\"spread_pct\"\": 0.5}')",
+      "Bash(curl -s http://127.0.0.1:8090/health)",
+      "Bash(curl -s \"https://api.arbiscan.io/api?module=contract&action=getsourcecode&address=0xb1026b8e7276e7ac75410f1fcbbe21796e8f7526\")",
+      "Bash(curl:*)",
+      "Bash(sudo cp:*)"
+    ]
+  }
+}

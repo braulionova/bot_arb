@@ -1,0 +1,54 @@
+services:
+  arb-node:
+    image: offchainlabs/nitro-node:v3.9.8-4624977
+    container_name: arb-node
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8547:8547"
+      - "127.0.0.1:8548:8548"
+    volumes:
+      - /root/arb-node-data:/home/user/.arbitrum
+    command:
+      - --parent-chain.connection.url=${L1_RPC_URL}
+      - --parent-chain.blob-client.beacon-url=${L1_BEACON_URL}
+      - --chain.id=42161
+      # --init.latest=pruned  # desactivado: snapshot descargado manualmente con streaming
+      # Minimal HTTP API (solo lo que el bot necesita)
+      - --http.api=net,web3,eth
+      - --http.addr=0.0.0.0
+      - --http.vhosts=*
+      - --http.corsdomain=*
+      # WebSocket
+      - --ws.addr=0.0.0.0
+      - --ws.port=8548
+      # Sin staker (no valida, solo lee)
+      - --node.staker.enable=false
+      - --node.feed.input.url=wss://arb1.arbitrum.io/feed
+      # ─── MÍNIMO DISCO (678GB total, ~140GB libres después de snapshot) ───
+      - --execution.caching.archive=false
+      - --execution.caching.database-cache=2048
+      - --execution.caching.state-scheme=path
+      - --execution.caching.state-history=64
+      - --execution.caching.trie-dirty-cache=512
+      - --execution.caching.trie-clean-cache=512
+      - --execution.caching.snapshot-cache=0
+      - --execution.rpc.log-no-history
+      - --execution.tx-indexer.tx-lookup-limit=128
+      - --node.batch-poster.enable=false
+      - --init.prune=full
+      # ─── GARBAGE COLLECTION ───
+      - --execution.caching.max-number-of-blocks-to-skip-state-saving=128
+      - --execution.caching.snapshot-restore-gas-limit=0
+      # ─── LATENCIA ───
+      - --execution.rpc.gas-cap=50000000
+      - --execution.rpc.evm-timeout=5s
+      - --execution.rpc.tx-fee-cap=0
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"
