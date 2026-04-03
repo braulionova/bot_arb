@@ -522,73 +522,54 @@ async fn main() -> Result<()> {
             continue;
         }
 
-        // ── DIRECT PROBE: try cross-DEX pool pairs via eth_call (no off-chain math) ──
-        // Only probe when: swap is large enough AND pools have different fee tiers/DEXes
-        // Limits probe to ~3-5 eth_calls per qualifying swap to avoid node overload
-        if live_mode && pools.len() >= 2 && !swap.amount_in.is_zero() {
-            // Only probe for swaps > 0.01 ETH equivalent (filter noise)
-            let amount_f = crate::arb::u256_to_f64(swap.amount_in);
-            let is_large_swap = amount_f > 1e16; // > 0.01 ETH or 10k tokens
+        // ── DIRECT PROBE: try ALL cross-DEX pool pairs via eth_call ──
+        // No off-chain math, no cooldown filtering — eth_call is free, let the chain decide
+        if live_mode && pools.len() >= 2 {
+            let probe_pools = pools.clone();
+            let probe_exec = executor.clone();
+            let probe_af = arb_found.clone();
+            let probe_ae = arb_executed.clone();
+            let probe_as = arb_success.clone();
+            let probe_tg = tg_tx.clone();
+            let ti = swap.token_in;
+            let to_addr = swap.token_out;
+            tokio::spawn(async move {
+                // Try every unique pair (max ~10 pairs for most token combos)
+                for i in 0..probe_pools.len().min(6) {
+                    for j in (i+1)..probe_pools.len().min(6) {
+                        let pa = &probe_pools[i];
+                        let pb = &probe_pools[j];
+                        // Skip exact same pool or same DEX+fee
+                        if pa.address == pb.address { continue; }
+                        if pa.dex == pb.dex && pa.fee_bps == pb.fee_bps { continue; }
 
-            if is_large_swap {
-                let probe_pools = pools.clone();
-                let probe_exec = executor.clone();
-                let probe_cd = cooldown.clone();
-                let probe_af = arb_found.clone();
-                let probe_ae = arb_executed.clone();
-                let probe_as = arb_success.clone();
-                let probe_tg = tg_tx.clone();
-                let ti = swap.token_in;
-                let to = swap.token_out;
-                let swap_pool = swap.pool;
-                tokio::spawn(async move {
-                    // Find the pool that was just swapped on
-                    let swapped = probe_pools.iter().find(|p| p.address == swap_pool);
-                    // Probe against OTHER pools (different DEX or fee tier)
-                    for other in &probe_pools {
-                        if other.address == swap_pool { continue; }
-                        let swapped_pool = match swapped {
-                            Some(p) => p,
-                            None => &probe_pools[0], // fallback
-                        };
-                        if other.dex == swapped_pool.dex && other.fee_bps == swapped_pool.fee_bps {
-                            continue; // skip same DEX + same fee
-                        }
-                        if probe_cd.is_cooled_down(swapped_pool.address, other.address).await {
-                            continue;
-                        }
-
-                        // Try: buy on swapped pool (cheap after big sell), sell on other
-                        if let Ok(()) = probe_exec.probe_2hop_arb(ti, to, swapped_pool, other).await {
+                        // Try both directions
+                        if let Ok(()) = probe_exec.probe_2hop_arb(ti, to_addr, pa, pb).await {
                             probe_af.fetch_add(1, Ordering::Relaxed);
                             probe_ae.fetch_add(1, Ordering::Relaxed);
                             probe_as.fetch_add(1, Ordering::Relaxed);
-                            info!("PROBE SUCCESS — arb found and sent!");
+                            info!(buy = ?pa.dex, sell = ?pb.dex, "PROBE SUCCESS — tx sent!");
                             if let Some(ref tx) = probe_tg {
                                 let _ = tx.send(TgMsg::ArbDetected {
                                     arb_num: probe_af.load(Ordering::Relaxed),
-                                    profit_eth: 0.001,
-                                    spread_pct: 0.0,
-                                    buy_dex: format!("{:?}", swapped_pool.dex),
-                                    sell_dex: format!("{:?}", other.dex),
-                                    amount_eth: 0.0,
-                                    is_3hop: false,
+                                    profit_eth: 0.001, spread_pct: 0.0,
+                                    buy_dex: format!("{:?}", pa.dex),
+                                    sell_dex: format!("{:?}", pb.dex),
+                                    amount_eth: 0.0, is_3hop: false,
                                 });
                             }
                             return;
                         }
-                        // Try reverse direction too
-                        if let Ok(()) = probe_exec.probe_2hop_arb(ti, to, other, swapped_pool).await {
+                        if let Ok(()) = probe_exec.probe_2hop_arb(ti, to_addr, pb, pa).await {
                             probe_af.fetch_add(1, Ordering::Relaxed);
                             probe_ae.fetch_add(1, Ordering::Relaxed);
                             probe_as.fetch_add(1, Ordering::Relaxed);
-                            info!("PROBE SUCCESS (reverse) — arb found and sent!");
+                            info!(buy = ?pb.dex, sell = ?pa.dex, "PROBE SUCCESS (rev) — tx sent!");
                             return;
                         }
-                        probe_cd.mark_failed(swapped_pool.address, other.address).await;
                     }
-                });
-            }
+                }
+            });
         }
 
         // ── Traditional arb detection (off-chain math, backup) ──

@@ -233,12 +233,14 @@ impl<P: Provider + Clone + 'static, S: Provider + Clone + 'static> Executor<P, S
         }
 
         if best_amount.is_zero() {
-            return Err(eyre::eyre!("no profitable amount found"));
+            return Err(eyre::eyre!("no profitable amount"));
         }
 
         info!(
             amount = format!("{:.4}", crate::arb::u256_to_f64(best_amount) / 1e18),
+            buy_pool = %buy_pool.address,
             buy = ?buy_pool.dex, sell = ?sell_pool.dex,
+            token_in = %token_in, token_out = %token_out,
             "PROBE HIT — sending flash loan arb"
         );
 
@@ -668,7 +670,7 @@ impl<P: Provider + Clone + 'static, S: Provider + Clone + 'static> Executor<P, S
             let mut tx_1559 = TxEip1559 {
                 chain_id: 42161,
                 nonce,
-                gas_limit: 350_000,
+                gas_limit: 700_000, // flash loan + multi-pool swaps need more gas
                 max_fee_per_gas: max_fee,
                 max_priority_fee_per_gas: priority_fee,
                 to: TxKind::Call(self.arb_contract),
@@ -689,6 +691,14 @@ impl<P: Provider + Clone + 'static, S: Provider + Clone + 'static> Executor<P, S
                 "method": "eth_sendRawTransaction",
                 "params": [raw_hex],
                 "id": 1
+            });
+
+            // Send to BOTH sequencer AND local node for redundancy
+            let body_clone = body.clone();
+            let raw_client2 = self.raw_client.clone();
+            tokio::spawn(async move {
+                let _ = raw_client2.post("http://127.0.0.1:8547")
+                    .json(&body_clone).send().await;
             });
 
             match self.raw_client.post(&self.sequencer_url)
@@ -757,19 +767,50 @@ impl<P: Provider + Clone + 'static, S: Provider + Clone + 'static> Executor<P, S
                             return Ok(());
                         } else if let Some(err) = json.get("error") {
                             let msg = err.to_string();
+                            error!(error = %msg, nonce, "Sequencer REJECTED tx");
                             if msg.contains("nonce") {
                                 let _ = self.wallet.sync_nonce(&self.sim_provider).await;
                             } else {
                                 self.wallet.reset_nonce(nonce);
                             }
-                            return Ok(());
+                            return Err(eyre::eyre!("sequencer rejected: {}", msg));
                         }
                     }
+                    error!(nonce, "Sequencer returned unparseable response");
                     self.wallet.reset_nonce(nonce);
-                    return Ok(());
+                    return Err(eyre::eyre!("sequencer: unparseable response"));
                 }
-                Err(_) => {
+                Err(e) => {
+                    error!(error = %e, "Sequencer HTTP error — trying local node");
                     self.wallet.reset_nonce(nonce);
+                    // Try local node directly
+                    let nonce2 = self.wallet.next_nonce();
+                    let mut tx2 = TxEip1559 {
+                        chain_id: 42161,
+                        nonce: nonce2,
+                        gas_limit: 500_000,
+                        max_fee_per_gas: max_fee,
+                        max_priority_fee_per_gas: priority_fee,
+                        to: TxKind::Call(self.arb_contract),
+                        input: calldata.clone().into(),
+                        ..Default::default()
+                    };
+                    let sig2 = signer.sign_transaction_sync(&mut tx2)?;
+                    let signed2 = tx2.into_signed(sig2);
+                    let mut encoded2 = Vec::with_capacity(512);
+                    signed2.eip2718_encode(&mut encoded2);
+                    let raw2 = format!("0x{}", hex::encode(&encoded2));
+                    let body2 = serde_json::json!({"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":[raw2],"id":1});
+                    match self.raw_client.post("http://127.0.0.1:8547").json(&body2).send().await {
+                        Ok(resp) => {
+                            let text = resp.text().await.unwrap_or_default();
+                            info!(response = %text, "Local node send result");
+                        }
+                        Err(e2) => {
+                            error!(error = %e2, "Local node also failed");
+                            self.wallet.reset_nonce(nonce2);
+                        }
+                    }
                     // Fall through to slow path
                 }
             }
