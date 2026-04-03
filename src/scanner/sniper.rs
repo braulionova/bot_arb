@@ -45,6 +45,14 @@ fn is_safe_token(token: &Address) -> bool {
         || *token == indexer::JOE
         || *token == indexer::WSTETH
         || *token == indexer::FRAX
+        || *token == indexer::RSETH
+        || *token == indexer::VELA
+        || *token == indexer::CBBTC
+        || *token == indexer::GNS
+        || *token == indexer::GNO
+        || *token == indexer::APE
+        || *token == indexer::USDS
+        || *token == indexer::IDOS
 }
 
 sol! {

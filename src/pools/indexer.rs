@@ -102,6 +102,15 @@ pub const YBR: Address = address!("11920f139a3121c2836e01551d43f95b3c31159c");
 pub const VCNT: Address = address!("60bf4e7cf16ff34513514b968483b54beff42a81");
 pub const WEETH: Address = address!("35751007a407ca6FEFfE80b3cB397736D2cf4dbe");
 pub const GHO: Address = address!("7dfF72693f6A4149b17e7C6314655f6A9F7c8B33");
+// ─── Longtail tokens from on-chain arb analysis (24h, 378 arbs) ───
+pub const RSETH: Address = address!("4186BFC76E2E237523CBC30FD220FE055156b41F");
+pub const VELA: Address = address!("088cd8f5eF3652623c22D48b1605DCfE860Cd704");
+pub const CBBTC: Address = address!("cbB7C0000aB88B473b1f5aFd9ef808440eed33Bf");
+pub const GNS: Address = address!("18c11FD286C5EC11c3b683Caa813B77f5163A122");
+pub const GNO: Address = address!("a0b862F60edEF4452F25B4160F177db44DeB6Cf1");
+pub const APE: Address = address!("7f9FBf9bdD3F4105C478b996B648FE6e828a1e98");
+pub const USDS: Address = address!("D74f5255D557944cf7Dd0E45FF521520002D5748");
+pub const IDOS: Address = address!("68731D6f14b827bBcfFBEbB62b19dAA18De1d79c");
 
 // ─── Curve stable pool addresses on Arbitrum ───
 
@@ -229,6 +238,51 @@ pub async fn index_priority_pools<P: Provider + Clone + 'static>(
 
         // GHO stablecoin arb (new, low competition)
         (address!("72ef08ed117dfa70c9e4116f1f3df0e7aab41863"), DexType::UniswapV3, GHO, USDC, 5, "UniV3 GHO/USDC 0.05%"),
+
+        // ═══ ON-CHAIN VERIFIED WINNING POOLS (from 378 arbs/24h analysis) ═══
+
+        // ── WETH/USDT cross-fee arbs (25+10+4 = 39 arbs/day) ──
+        (address!("641C00A822e8b671738d32a431a4Fb6074E5c79d"), DexType::UniswapV3, WETH, USDT, 5, "UniV3 WETH/USDT 0.05%"),
+        (address!("00fa2ed5947733cdedc614a371feca2ac9af150a"), DexType::UniswapV3, WETH, USDT, 30, "UniV3 WETH/USDT 0.3%"),
+        (address!("42161084d0672e1d3f26a9b53e653be2084ff19c"), DexType::UniswapV3, WETH, USDT, 1, "UniV3 WETH/USDT 0.01%"),
+
+        // ── USDC/USDT stablecoin arbs (12+8 = 20 arbs/day) ──
+        (address!("be3ad6a5669dc0b8b12febc03608860c31e2eef6"), DexType::UniswapV3, USDC, USDT, 1, "UniV3 USDC/USDT 0.01%"),
+        (address!("a17afcab059f3c6751f5b64347b5a503c3291868"), DexType::CamelotV3, USDC, USDT, 1, "CamelotV3 USDC/USDT"),
+
+        // ── USDT/USDC.e (18 arbs/day) ──
+        (address!("3ab5dd69950a948c55d1fbfb7500bf92b4bd4c48"), DexType::CamelotV3, USDT, USDC_E, 1, "CamelotV3 USDT/USDC.e"),
+
+        // ── WETH/USDC.e (6 arbs/day) ──
+        (address!("c31e54c7a869b9fcbecc14363cf510d1c41fa443"), DexType::UniswapV3, WETH, USDC_E, 5, "UniV3 WETH/USDC.e 0.05%"),
+
+        // ── DAI/USDT (4 arbs/day) ──
+        (address!("7f580f8a02b759c350e6b8340e7c2d4b8162b6a9"), DexType::UniswapV3, DAI, USDT, 1, "UniV3 DAI/USDT 0.01%"),
+
+        // ── rsETH/WETH cross-DEX (8+8 = 16 arbs/day) ──
+        (address!("b355cce5cbaf411bd56e3b092f5aa10a894083ae"), DexType::CamelotV3, RSETH, WETH, 1, "CamelotV3 rsETH/WETH"),
+        (address!("b84cd594266c621C4b782578B90112e4559De888"), DexType::UniswapV2, RSETH, WETH, 30, "UniV2 rsETH/WETH"),
+        (address!("6993DF286102206DB13d92ED5CC7CA60a627c735"), DexType::CamelotV2, RSETH, WETH, 30, "CamelotV2 rsETH/WETH"),
+        (address!("94B39d3362ac972D8D45aEbfCA4F461244fdA09E"), DexType::SushiSwapV2, RSETH, WETH, 30, "SushiV2 rsETH/WETH"),
+
+        // ── GNS/WETH cross-DEX (10 arbs/day) ──
+        (address!("9b6ff025aee245d314c09f57b72f0de6e231c3a6"), DexType::CamelotV3, GNS, WETH, 1, "CamelotV3 GNS/WETH"),
+        (address!("c217c5BB847E1F3548f969758E5d9905B5EEFfaa"), DexType::SushiSwapV2, GNS, WETH, 30, "SushiV2 GNS/WETH"),
+        (address!("0E80161d953BadA1F4Ec71647cCcfDb64E9c9696"), DexType::UniswapV2, GNS, WETH, 30, "TraderJoe GNS/WETH"),
+
+        // ── VELA/WETH cross-DEX (4 arbs/day) ──
+        (address!("DFa22D18127b70be1FA5e9d9B0a7736fd1d0701E"), DexType::UniswapV2, VELA, WETH, 30, "UniV2 VELA/WETH"),
+        (address!("4c0A68dd92449Fc06c1A651E9eb1dFfB61D64e18"), DexType::CamelotV2, VELA, WETH, 30, "CamelotV2 VELA/WETH"),
+        (address!("56ba82A1E46dcE56F40cDbc8A1373aA9C01735dc"), DexType::SushiSwapV2, VELA, WETH, 30, "SushiV2 VELA/WETH"),
+        (address!("86880E319003a2D2625a58209b910a52A3c5caE0"), DexType::UniswapV2, VELA, WETH, 30, "TraderJoe VELA/WETH"),
+
+        // ── cbBTC cross-type arbs (8 arbs/day) ──
+        (address!("9b42809aaae8d088ee01fe637e948784730f0386"), DexType::UniswapV3, WBTC, CBBTC, 1, "UniV3 WBTC/cbBTC 0.01%"),
+        (address!("A18B5B85cb9EDd12ADf8cE0105888CE7F41EBd92"), DexType::UniswapV2, CBBTC, WETH, 30, "UniV2 cbBTC/WETH"),
+
+        // ── WETH/USDC.e V2 (5 arbs/day) ──
+        (address!("f64dfe17c8b87f012fcf50fbda1d62bfa148366a"), DexType::UniswapV2, WETH, USDC, 30, "UniV2 WETH/USDC"),
+        (address!("3e93e4b407b3f11a48a9065476e88c9f642c9288"), DexType::UniswapV2, WETH, USDC_E, 30, "UniV2 WETH/USDC.e"),
     ];
 
     for (addr, dex, t0, t1, fee, name) in all_pools {
@@ -486,7 +540,7 @@ pub async fn index_background<P: Provider + Clone + 'static>(
         // NOTE: Camelot V3 removed — uses Algebra interface, indexed via hardcoded pools above
     ];
 
-    let top_tokens = &[WETH, USDC, USDC_E, USDT, WBTC, ARB, GMX, DAI, LINK, UNI, PENDLE, RDNT, MAGIC, GRAIL, DPX, STG, JOE, WSTETH, FRAX, JONES, WINR, SILO, PREMIA, RAIN, YBR, VCNT, WEETH, GHO];
+    let top_tokens = &[WETH, USDC, USDC_E, USDT, WBTC, ARB, GMX, DAI, LINK, UNI, PENDLE, RDNT, MAGIC, GRAIL, DPX, STG, JOE, WSTETH, FRAX, JONES, WINR, SILO, PREMIA, RAIN, YBR, VCNT, WEETH, GHO, RSETH, VELA, CBBTC, GNS, GNO, APE, USDS, IDOS];
     let fees = &[100u32, 500, 3000, 10000];
 
     for (factory_addr, dex, name) in &v3_factories {
