@@ -204,11 +204,25 @@ impl<P: Provider + Clone + 'static, S: Provider + Clone + 'static> Executor<P, S
 
         let contract = IArbExecutor::new(self.arb_contract, &self.sim_provider);
 
-        // FAST PROBE: max 3 eth_calls (was 7) — speed > optimal amount
-        // Try medium first, then branch up or down
-        let medium = U256::from(100_000_000_000_000_000u64); // 0.1 ETH
-        let small = U256::from(10_000_000_000_000_000u64);   // 0.01 ETH
-        let large = U256::from(500_000_000_000_000_000u64);  // 0.5 ETH
+        // FAST PROBE: max 2 eth_calls — amounts scaled by token decimals
+        // Known stablecoins use 6 decimals, WBTC uses 8, everything else 18
+        let token_in_lower = format!("{:?}", token_in).to_lowercase();
+        let is_6dec = token_in_lower.contains("af88d065e77c8cc2") // USDC
+            || token_in_lower.contains("ff970a61a04b1ca1")       // USDC.e
+            || token_in_lower.contains("fd086bc7cd5c481d");      // USDT
+        let is_8dec = token_in_lower.contains("2f2a2543b76a4166") // WBTC
+            || token_in_lower.contains("cbb7c0000ab88b47");      // cbBTC
+
+        let (medium, small) = if is_6dec {
+            // Stablecoins: $100 and $1000
+            (U256::from(100_000_000u64), U256::from(1_000_000_000u64))  // 100, 1000 USDC
+        } else if is_8dec {
+            // BTC tokens: 0.005 and 0.05
+            (U256::from(500_000u64), U256::from(5_000_000u64))  // 0.005, 0.05 BTC
+        } else {
+            // ETH and all 18-decimal tokens
+            (U256::from(50_000_000_000_000_000u64), U256::from(500_000_000_000_000_000u64)) // 0.05, 0.5 ETH
+        };
 
         let mut best_amount = U256::ZERO;
 
