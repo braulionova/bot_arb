@@ -1,0 +1,54 @@
+services:
+  arb-node:
+    image: offchainlabs/nitro-node:v3.9.8-4624977
+    container_name: arb-node
+    restart: unless-stopped
+    # ─── HOST NETWORKING: elimina NAT bridge (~0.1-0.5ms/call) ───
+    network_mode: host
+    environment:
+      - GODEBUG=http2client=0
+    volumes:
+      - /data/arbitrum:/home/user/.arbitrum
+    command:
+      - --parent-chain.connection.url=${L1_RPC_URL}
+      - --parent-chain.blob-client.beacon-url=${L1_BEACON_URL}
+      - --chain.id=42161
+      # Minimal HTTP API (solo lo que el bot necesita)
+      - --http.api=net,web3,eth
+      - --http.addr=127.0.0.1
+      - --http.port=8547
+      - --http.vhosts=localhost
+      # WebSocket (same host, no need for broad access)
+      - --ws.addr=127.0.0.1
+      - --ws.port=8548
+      # Sin staker (no valida, solo lee)
+      - --node.staker.enable=false
+      - --node.feed.input.url=wss://arb1.arbitrum.io/feed
+      # ─── CACHES AGRESIVOS (30GB RAM, nodo usa ~5GB, maximizar hit rate) ───
+      - --execution.caching.archive=false
+      - --execution.caching.database-cache=4096
+      - --execution.caching.state-scheme=hash
+      - --execution.caching.state-history=32
+      - --execution.caching.trie-dirty-cache=2048
+      - --execution.caching.trie-clean-cache=2048
+      # snapshot-cache=0 during sync for max I/O throughput; enable (1024) once synced
+      - --execution.caching.snapshot-cache=0
+      - --execution.rpc.log-no-history
+      - --execution.tx-indexer.tx-lookup-limit=64
+      - --node.batch-poster.enable=false
+      # ─── GARBAGE COLLECTION ───
+      - --execution.caching.max-number-of-blocks-to-skip-state-saving=128
+      - --execution.caching.snapshot-restore-gas-limit=0
+      # ─── LATENCIA MÍNIMA ───
+      - --execution.rpc.gas-cap=50000000
+      - --execution.rpc.evm-timeout=5s
+      - --execution.rpc.tx-fee-cap=0
+    deploy:
+      resources:
+        limits:
+          memory: 24G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "2"

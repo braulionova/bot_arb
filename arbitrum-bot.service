@@ -1,0 +1,20 @@
+[Unit]
+Description=Arbitrum MEV Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/arbitrum_bot
+EnvironmentFile=/home/ubuntu/arbitrum_bot/.env
+Environment=RUST_LOG=arbitrum_bot=info
+Environment=ML_OBSERVE_ONLY=false
+ExecStart=/home/ubuntu/arbitrum_bot/target/release/arbitrum_bot
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/ubuntu/arbitrum_bot/logs/arb-bot.log
+StandardError=append:/home/ubuntu/arbitrum_bot/logs/arb-bot.log
+
+[Install]
+WantedBy=multi-user.target

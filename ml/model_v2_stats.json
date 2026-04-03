@@ -1,0 +1,83 @@
+{
+  "n_samples": 173511,
+  "n_positive": 1060,
+  "threshold": 0.2,
+  "precision": 1.0,
+  "recall": 1.0,
+  "auc": 1.0,
+  "features": [
+    "spread_pct",
+    "net_spread_pct",
+    "abs_spread",
+    "buy_fee_bps",
+    "sell_fee_bps",
+    "total_fee_bps",
+    "buy_dex_enc",
+    "sell_dex_enc",
+    "buy_is_v3",
+    "sell_is_v3",
+    "both_v3",
+    "both_v2",
+    "mixed_v2_v3",
+    "stablecoin_in",
+    "weth_involved",
+    "sim_has_data",
+    "profit_gross_eth",
+    "profit_net_eth",
+    "input_nonzero",
+    "hour",
+    "minute",
+    "weekday",
+    "profitable_local",
+    "onchain_buy_pool_freq",
+    "onchain_sell_pool_freq",
+    "buy_pool_liquidity",
+    "sell_pool_liquidity",
+    "min_liquidity",
+    "sim_latency_ms"
+  ],
+  "top_features": [
+    {
+      "name": "profit_gross_eth",
+      "importance": 7920580.0
+    },
+    {
+      "name": "spread_pct",
+      "importance": 1.1723971043085238e-13
+    },
+    {
+      "name": "minute",
+      "importance": 7.216451976169233e-16
+    },
+    {
+      "name": "net_spread_pct",
+      "importance": 0.0
+    },
+    {
+      "name": "abs_spread",
+      "importance": 0.0
+    },
+    {
+      "name": "buy_fee_bps",
+      "importance": 0.0
+    },
+    {
+      "name": "sell_fee_bps",
+      "importance": 0.0
+    },
+    {
+      "name": "total_fee_bps",
+      "importance": 0.0
+    },
+    {
+      "name": "buy_dex_enc",
+      "importance": 0.0
+    },
+    {
+      "name": "sell_dex_enc",
+      "importance": 0.0
+    }
+  ],
+  "onchain_arbs_analyzed": 79,
+  "gas_recommendation_gwei": 0.026140913696296297
+}

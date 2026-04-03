@@ -1,0 +1,18 @@
+[Unit]
+Description=Arbitrum RPC Cache Proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/arbitrum_bot
+EnvironmentFile=/home/ubuntu/arbitrum_bot/.env
+ExecStart=/home/ubuntu/arbitrum_bot/target/release/rpc-cache
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/ubuntu/arbitrum_bot/logs/rpc-cache.log
+StandardError=append:/home/ubuntu/arbitrum_bot/logs/rpc-cache.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+target/
+logs/
+ml/training_data.jsonl
+ml/onchain_arbs.jsonl
+ml/all_pools.json
+ml/arb_pairs.json
+ml/model*.txt
+.env
+node.env
+/tmp/
+*.log
+foundry/broadcast/
+foundry/cache/
+foundry/lib/
+.claude/

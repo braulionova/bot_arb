@@ -1,0 +1,43 @@
+[workspace]
+members = [".", "rpc-cache", "tools/stream-download", "tools/sst-extractor", "tools/tar-pool-scanner"]
+
+[package]
+name = "arbitrum_bot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Ethereum primitives & RPC (alloy stack)
+alloy = { version = "1", features = ["full"] }
+
+# Sequencer feed
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Config
+dotenvy = "0.15"
+
+# Error handling
+eyre = "0.6"
+
+# Misc
+hex = "0.4"
+base64 = "0.22"
+chrono = "0.4"
+
+# Telegram notifications
+reqwest = { version = "0.12", features = ["json"] }
+
+# revm removed — AlloyDB was 500-1500ms (on-demand fetch), rpc-cache is ~5ms
+# Will re-add when we can pre-load ALL pool state into CacheDB without AlloyDB
