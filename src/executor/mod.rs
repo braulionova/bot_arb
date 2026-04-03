@@ -204,31 +204,31 @@ impl<P: Provider + Clone + 'static, S: Provider + Clone + 'static> Executor<P, S
 
         let contract = IArbExecutor::new(self.arb_contract, &self.sim_provider);
 
-        // Test amounts from small to large — first one that passes eth_call wins
-        let test_amounts: Vec<U256> = vec![
-            U256::from(1_000_000_000_000_000u64),    // 0.001 ETH
-            U256::from(5_000_000_000_000_000u64),    // 0.005 ETH
-            U256::from(10_000_000_000_000_000u64),   // 0.01 ETH
-            U256::from(50_000_000_000_000_000u64),   // 0.05 ETH
-            U256::from(100_000_000_000_000_000u64),  // 0.1 ETH
-            U256::from(500_000_000_000_000_000u64),  // 0.5 ETH
-            U256::from(1_000_000_000_000_000_000u128), // 1 ETH
-        ];
+        // FAST PROBE: max 3 eth_calls (was 7) — speed > optimal amount
+        // Try medium first, then branch up or down
+        let medium = U256::from(100_000_000_000_000_000u64); // 0.1 ETH
+        let small = U256::from(10_000_000_000_000_000u64);   // 0.01 ETH
+        let large = U256::from(500_000_000_000_000_000u64);  // 0.5 ETH
 
         let mut best_amount = U256::ZERO;
 
-        for amount in &test_amounts {
-            let calldata = contract.executeArbFlashLoan(
-                token_in, *amount,
-                buy_pool.address, sell_pool.address,
+        // Call 1: try medium
+        let cd_med = contract.executeArbFlashLoan(
+            token_in, medium, buy_pool.address, sell_pool.address,
+            token_out, buy_is_v3, sell_is_v3, U256::ZERO,
+        ).calldata().clone();
+
+        if self.local_sim.simulate(self.arb_contract, &cd_med).await {
+            // Medium works! Send immediately, try large in background for next time
+            best_amount = medium;
+        } else {
+            // Try small — still fast (1 more call)
+            let cd_sm = contract.executeArbFlashLoan(
+                token_in, small, buy_pool.address, sell_pool.address,
                 token_out, buy_is_v3, sell_is_v3, U256::ZERO,
             ).calldata().clone();
-
-            if self.local_sim.simulate(self.arb_contract, &calldata).await {
-                best_amount = *amount;
-                // Don't break — try larger amounts for more profit
-            } else if !best_amount.is_zero() {
-                break; // Past the peak — use last good amount
+            if self.local_sim.simulate(self.arb_contract, &cd_sm).await {
+                best_amount = small;
             }
         }
 

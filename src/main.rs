@@ -522,8 +522,9 @@ async fn main() -> Result<()> {
             continue;
         }
 
-        // ── DIRECT PROBE: try ALL cross-DEX pool pairs via eth_call ──
-        // No off-chain math, no cooldown filtering — eth_call is free, let the chain decide
+        // ── FAST PROBE: swapped pool vs best cross-DEX counterpart ──
+        // Max 2 pairs × 2 directions × 2 eth_calls = 8 calls (~112ms)
+        // Was: 84 calls (~1200ms) — 10x faster
         if live_mode && pools.len() >= 2 {
             let probe_pools = pools.clone();
             let probe_exec = executor.clone();
@@ -533,40 +534,50 @@ async fn main() -> Result<()> {
             let probe_tg = tg_tx.clone();
             let ti = swap.token_in;
             let to_addr = swap.token_out;
+            let swap_pool_addr = swap.pool;
             tokio::spawn(async move {
-                // Try every unique pair (max ~10 pairs for most token combos)
-                for i in 0..probe_pools.len().min(6) {
-                    for j in (i+1)..probe_pools.len().min(6) {
-                        let pa = &probe_pools[i];
-                        let pb = &probe_pools[j];
-                        // Skip exact same pool or same DEX+fee
-                        if pa.address == pb.address { continue; }
-                        if pa.dex == pb.dex && pa.fee_bps == pb.fee_bps { continue; }
+                // Find the swapped pool
+                let swapped_idx = probe_pools.iter().position(|p| p.address == swap_pool_addr);
+                let swapped = match swapped_idx {
+                    Some(i) => &probe_pools[i],
+                    None => {
+                        if probe_pools.len() < 2 { return; }
+                        &probe_pools[0]
+                    }
+                };
 
-                        // Try both directions
-                        if let Ok(()) = probe_exec.probe_2hop_arb(ti, to_addr, pa, pb).await {
-                            probe_af.fetch_add(1, Ordering::Relaxed);
-                            probe_ae.fetch_add(1, Ordering::Relaxed);
-                            probe_as.fetch_add(1, Ordering::Relaxed);
-                            info!(buy = ?pa.dex, sell = ?pb.dex, "PROBE SUCCESS — tx sent!");
-                            if let Some(ref tx) = probe_tg {
-                                let _ = tx.send(TgMsg::ArbDetected {
-                                    arb_num: probe_af.load(Ordering::Relaxed),
-                                    profit_eth: 0.001, spread_pct: 0.0,
-                                    buy_dex: format!("{:?}", pa.dex),
-                                    sell_dex: format!("{:?}", pb.dex),
-                                    amount_eth: 0.0, is_3hop: false,
-                                });
-                            }
-                            return;
+                // Find top 2 cross-DEX counterparts (different DEX or different fee)
+                let mut counter = 0u32;
+                for other in &probe_pools {
+                    if other.address == swapped.address { continue; }
+                    if other.dex == swapped.dex && other.fee_bps == swapped.fee_bps { continue; }
+                    if counter >= 2 { break; } // max 2 counterparts
+                    counter += 1;
+
+                    // Direction 1: buy on swapped (price just moved), sell on other
+                    if let Ok(()) = probe_exec.probe_2hop_arb(ti, to_addr, swapped, other).await {
+                        probe_af.fetch_add(1, Ordering::Relaxed);
+                        probe_ae.fetch_add(1, Ordering::Relaxed);
+                        probe_as.fetch_add(1, Ordering::Relaxed);
+                        info!(buy = ?swapped.dex, sell = ?other.dex, "$$$ PROBE SUCCESS — tx sent!");
+                        if let Some(ref tx) = probe_tg {
+                            let _ = tx.send(TgMsg::ArbDetected {
+                                arb_num: probe_af.load(Ordering::Relaxed),
+                                profit_eth: 0.001, spread_pct: 0.0,
+                                buy_dex: format!("{:?}", swapped.dex),
+                                sell_dex: format!("{:?}", other.dex),
+                                amount_eth: 0.0, is_3hop: false,
+                            });
                         }
-                        if let Ok(()) = probe_exec.probe_2hop_arb(ti, to_addr, pb, pa).await {
-                            probe_af.fetch_add(1, Ordering::Relaxed);
-                            probe_ae.fetch_add(1, Ordering::Relaxed);
-                            probe_as.fetch_add(1, Ordering::Relaxed);
-                            info!(buy = ?pb.dex, sell = ?pa.dex, "PROBE SUCCESS (rev) — tx sent!");
-                            return;
-                        }
+                        return;
+                    }
+                    // Direction 2: reverse
+                    if let Ok(()) = probe_exec.probe_2hop_arb(ti, to_addr, other, swapped).await {
+                        probe_af.fetch_add(1, Ordering::Relaxed);
+                        probe_ae.fetch_add(1, Ordering::Relaxed);
+                        probe_as.fetch_add(1, Ordering::Relaxed);
+                        info!(buy = ?other.dex, sell = ?swapped.dex, "$$$ PROBE SUCCESS (rev) — tx sent!");
+                        return;
                     }
                 }
             });
